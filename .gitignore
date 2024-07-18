@@ -71,8 +71,25 @@ crashlytics-build.properties
 Guess-The-Number-Client/[Aa]ssets/[Ss]treamingAssets/aa.meta
 Guess-The-Number-Client/[Aa]ssets/[Ss]treamingAssets/aa/*
 
+
+
+# Build results
+/Guess-The-Number-Server/Server/bin/
+/Guess-The-Number-Server/Server/obj/
+/Guess-The-Number-Server/Grains/bin/
+/Guess-The-Number-Server/Grains/obj/
+/Guess-The-Number-Server/GrainInterfaces/bin/
+/Guess-The-Number-Server/GrainInterfaces/obj/
+
+
 # MacOS generated file
 .DS_Store
 
+
+# Visual Studio Code
+Guess-The-Number-Client/.vscode/
+Guess-The-Number-Server/.vscode/
+
 # Rider files
-Guess-The-Number-Client/.idea
+Guess-The-Number-Client/.idea/
+Guess-The-Number-Server/.idea/
