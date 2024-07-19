@@ -4,9 +4,9 @@ namespace Grains;
 
 public class MatchmakingGrain : Grain, IMatchmakingGrain
 {
-    private readonly List<string> _playerQueue = new();
+    private readonly List<Guid> _playerQueue = new();
 
-    public async Task AddPlayerToQueue(string playerId)
+    public async Task AddPlayerToQueue(Guid playerId)
     {
         _playerQueue.Add(playerId);
 

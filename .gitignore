@@ -80,6 +80,8 @@ Guess-The-Number-Client/[Aa]ssets/[Ss]treamingAssets/aa/*
 /Guess-The-Number-Server/Grains/obj/
 /Guess-The-Number-Server/GrainInterfaces/bin/
 /Guess-The-Number-Server/GrainInterfaces/obj/
+/Guess-The-Number-Server/Client/bin/
+/Guess-The-Number-Server/Client/obj/
 
 
 # MacOS generated file

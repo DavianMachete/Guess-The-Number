@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Configuration;
+using Orleans.Runtime.Development;
 
 
 try
@@ -31,6 +33,7 @@ static async Task<IHost> StartServer()
                     options.ServiceId = "OrleansGuessTheNumber";
                 })
                 .ConfigureLogging(logging => logging.AddConsole());
+            builder.AddMemoryGrainStorage("Default");  // In-memory storage
         })
         .Build();
         

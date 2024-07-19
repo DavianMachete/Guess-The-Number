@@ -1,5 +1,6 @@
-using GrainInterfaces;
 using Orleans.Runtime;
+
+using GrainInterfaces;
 
 namespace Grains;
 
@@ -16,14 +17,14 @@ public class PlayerGrain : Grain, IPlayerGrain
     public async Task JoinQueue()
     {
         var matchmakingGrain = GrainFactory.GetGrain<IMatchmakingGrain>(0);
-        await matchmakingGrain.AddPlayerToQueue(this.GetPrimaryKeyString());
+        await matchmakingGrain.AddPlayerToQueue(this.GetPrimaryKey());
     }
 
     public async Task SubmitGuess(int guess)
     {
         var roomId = this.GetPrimaryKeyString(); // Assuming each player is in one room at a time
         var roomGrain = GrainFactory.GetGrain<IRoomGrain>(Guid.Parse(roomId));
-        await roomGrain.SubmitGuess(this.GetPrimaryKeyString(), guess);
+        await roomGrain.SubmitGuess(this.GetPrimaryKey(), guess);
     }
 
     public async Task<int> GetPoints()
@@ -43,5 +44,11 @@ public class PlayerGrain : Grain, IPlayerGrain
     {
         _playerModel.State.Name = name;
         await _playerModel.WriteStateAsync();
+    }
+
+    public async Task<string> GetName()
+    {
+        await _playerModel.ReadStateAsync();
+        return _playerModel.State.Name;
     }
 }
