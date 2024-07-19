@@ -20,8 +20,8 @@ public class MatchmakingGrain : Grain, IMatchmakingGrain
             var newRoomId = Guid.NewGuid();
             var roomGrain = GrainFactory.GetGrain<IRoomGrain>(newRoomId);
 
-            await roomGrain.EnterRoom(player1);
-            await roomGrain.EnterRoom(player2);
+            await roomGrain.Initialize(player1, player2);
+            
         }
     }
 }

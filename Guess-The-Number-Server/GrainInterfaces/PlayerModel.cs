@@ -1,13 +1,9 @@
 namespace GrainInterfaces;
 
 [GenerateSerializer]
-public class PlayerModel
+public record class PlayerModel(string UserName)
 {
-    public int Points { get; set; }
-    public string Name { get; set; }
-    
-    public PlayerModel(string name)
-    {
-        Name = name;
-    }
+    [Id(0)] public int Wins { get; set; }
+    [Id(1)] public int Loses { get; set; }
+    [Id(3)] public string UserName { get; set; } = UserName;
 }

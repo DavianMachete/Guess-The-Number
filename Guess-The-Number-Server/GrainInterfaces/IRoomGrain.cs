@@ -2,6 +2,6 @@ namespace GrainInterfaces;
 
 public interface IRoomGrain : IGrainWithGuidKey
 {
-    Task EnterRoom(Guid playerId);
-    Task SubmitGuess(Guid playerId, int guess);
+    Task Initialize(Guid player1Id,Guid player2Id);
+    Task SubmitGuess(IPlayerGrain player, int guess);
 }

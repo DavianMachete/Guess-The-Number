@@ -54,4 +54,4 @@ await player.SetName(name);
 var matchmaking = client.GetGrain<IMatchmakingGrain>(0);
 await matchmaking.AddPlayerToQueue(player.GetPrimaryKey());
 var playerName = await player.GetName();
-Console.WriteLine($"Player {playerName} Connected");
+Console.WriteLine($"Player {playerName} added to queue.");

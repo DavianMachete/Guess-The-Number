@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+
 using Orleans.Configuration;
-using Orleans.Runtime.Development;
 
 
 try
 {
+    Console.WriteLine("Starting server...");
     var host = await StartServer();
     
     Console.WriteLine("Press Enter to terminate...");
@@ -23,21 +23,28 @@ catch(Exception ex)
 
 static async Task<IHost> StartServer()
 {
-    var host = new HostBuilder()
-        .UseOrleans(builder =>
-        {
-            builder.UseLocalhostClustering()
-                .Configure<ClusterOptions>(options =>
-                {
-                    options.ClusterId = "dev";
-                    options.ServiceId = "OrleansGuessTheNumber";
-                })
-                .ConfigureLogging(logging => logging.AddConsole());
-            builder.AddMemoryGrainStorage("Default");  // In-memory storage
-        })
-        .Build();
-        
+    var hostBuilder = new HostBuilder();
+    var iHostBuilder = hostBuilder.UseOrleans(OnHostConfigure);
+    var host = iHostBuilder.Build();
     await host.StartAsync();
 
     return host;
+}
+
+static void OnHostConfigure(ISiloBuilder builder)
+{
+    Console.WriteLine("Configuring host...");
+    var iSiloBuilder = builder.UseLocalhostClustering();
+    iSiloBuilder = iSiloBuilder.Configure<ClusterOptions>(OnConfigureOptions);
+    iSiloBuilder.ConfigureLogging(logging => logging.AddConsole());
+    
+    Console.WriteLine("Adding Memory Grain Storage...");
+    builder.AddMemoryGrainStorage("Default"); 
+}
+
+static void OnConfigureOptions(ClusterOptions options)
+{
+    Console.WriteLine("Configuring host builder options...");
+    options.ClusterId = "dev";
+    options.ServiceId = "OrleansGuessTheNumber";
 }
