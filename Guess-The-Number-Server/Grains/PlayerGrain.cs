@@ -1,5 +1,3 @@
-using Orleans.Runtime;
-
 using GrainInterfaces;
 using Microsoft.Extensions.Logging;
 
@@ -7,9 +5,11 @@ namespace Grains;
 
 public class PlayerGrain : Grain, IPlayerGrain
 {
-    private Guid _currentRoomId;
+    private Guid? _currentRoomId;
     private readonly IPersistentState<PlayerModel> _playerModel;
     private readonly ILogger<PlayerGrain> _logger;
+
+    private IPlayerViewer? _viewer;
     
     private static string GrainType => nameof(PlayerGrain);
     private string GrainKey => this.GetPrimaryKeyString();
@@ -29,24 +29,37 @@ public class PlayerGrain : Grain, IPlayerGrain
 
         return Task.CompletedTask;
     }
-
-    public async Task JoinQueueAsync()
+    
+    public async Task Initialize(string name, IPlayerViewer viewer)
     {
-        _logger.LogInformation("{GrainType} {GrainKey} joining to matchmaking queue.", GrainType, GrainKey);
-        
-        var matchmakingGrain = GrainFactory.GetGrain<IMatchmakingGrain>(0);
-        await matchmakingGrain.AddPlayerToQueue(this.GetPrimaryKey());
+        _viewer = viewer;
+        _playerModel.State.UserName = name;
+        await _playerModel.WriteStateAsync();
+        _logger.LogInformation("{GrainType} {GrainKey} Initialized.", GrainType, GrainKey);
     }
 
-    public Task OnGameStarted(Guid roomId)
+    public async Task<string> GetName()
     {
+        await _playerModel.ReadStateAsync();
+        return _playerModel.State.UserName;
+    }
+
+    public Task OnGameStarted(Guid roomId, string opponentName)
+    {
+        _viewer?.GameStarted(opponentName);
         _logger.LogInformation("{GrainType} {GrainKey} game started.", GrainType, GrainKey);
         _currentRoomId = roomId;
         return Task.CompletedTask;
     }
 
+    public Task<Guid?> GetCurrentRoomId()
+    {
+        return Task.FromResult(_currentRoomId);
+    }
+
     public Task OnGameRoundStarted(int roundNumber)
     {
+        _viewer?.RoundStarted(roundNumber);
         _logger.LogInformation("{GrainType} {GrainKey} game round: {Round} started.", GrainType, GrainKey, roundNumber);
         return Task.CompletedTask;
     }
@@ -54,51 +67,30 @@ public class PlayerGrain : Grain, IPlayerGrain
     public async Task SubmitGuessAsync(int guess)
     {
         _logger.LogInformation("{GrainType} {GrainKey} submitting guess: {Guess}.", GrainType, GrainKey, guess);
-        var roomGrain = GrainFactory.GetGrain<IRoomGrain>(_currentRoomId);
+        var roomGrain = GrainFactory.GetGrain<IRoomGrain>((Guid)_currentRoomId!);
         await roomGrain.SubmitGuess(this, guess);
     }
 
-    public Task OnDrawRound(int roundNumber)
+    public Task OnRoundFinished(Result result, int playerPoints, int opponentPoints)
     {
-        _logger.LogInformation("{GrainType} {GrainKey} Game round finished with Draw. Round: {Round}.", GrainType, GrainKey, roundNumber);
+        _viewer?.RoundFinished(result,playerPoints,opponentPoints);
+        _logger.LogInformation("{GrainType} {GrainKey} Game round finished with {Result}.", GrainType, GrainKey, result.ToString());
         return Task.CompletedTask;
     }
 
-    public Task OnWinRound(int roundNumber)
+    public async Task OnGameFinishedAsync(Result result, int playerPoints, int opponentPoints)
     {
-        _logger.LogInformation("{GrainType} {GrainKey} Game round finished with Win. Round: {Round}.", GrainType, GrainKey, roundNumber);
-        return Task.CompletedTask;
-    }
-
-    public Task OnLoseRound(int roundNumber)
-    {
-        _logger.LogInformation("{GrainType} {GrainKey} Game round finished with Lose. Round: {Round}.", GrainType, GrainKey, roundNumber);
-        return Task.CompletedTask;
-    }
-
-    public async Task OnWinGameAsync()
-    {
+        _viewer?.GameFinished(result, playerPoints, opponentPoints);
+        _currentRoomId = null;
         await _playerModel.ReadStateAsync();
-        _playerModel.State.Wins++;
+        if (result == Result.Win)
+        {
+            _playerModel.State.Wins++;
+        }
+        else
+        {
+            _playerModel.State.Loses++;
+        }
         await _playerModel.WriteStateAsync();
-    }
-
-    public async Task OnLoseGameAsync()
-    {
-        await _playerModel.ReadStateAsync();
-        _playerModel.State.Loses++;
-        await _playerModel.WriteStateAsync();
-    }
-
-    public async Task SetName(string name)
-    {
-        _playerModel.State.UserName = name;
-        await _playerModel.WriteStateAsync();
-    }
-
-    public async Task<string> GetName()
-    {
-        await _playerModel.ReadStateAsync();
-        return _playerModel.State.UserName;
     }
 }

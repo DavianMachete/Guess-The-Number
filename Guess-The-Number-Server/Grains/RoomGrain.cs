@@ -41,6 +41,9 @@ public class RoomGrain : Grain, IRoomGrain
         if (_player1 == null || _player2 == null)
             return;
         
+        var player1Wins = _wins[_player1];
+        var player2Wins = _wins[_player2];
+        
         var player1Guess = _guesses[_player1];
         var player2Guess = _guesses[_player2];
 
@@ -50,19 +53,19 @@ public class RoomGrain : Grain, IRoomGrain
         if (player1Diff < player2Diff)
         {
             _wins[_player1] += 1;
-            await _player2.OnLoseRound(_round);
-            await _player1.OnWinRound(_round);
+            await _player2.OnRoundFinished(Result.Lose, player2Wins, player1Wins);
+            await _player1.OnRoundFinished(Result.Win, player1Wins, player2Wins);
         }
         else if (player1Diff > player2Diff)
         {
             _wins[_player2] += 1;
-            await _player2.OnWinRound(_round);
-            await _player1.OnLoseRound(_round);
+            await _player2.OnRoundFinished(Result.Win, player2Wins, player1Wins);
+            await _player1.OnRoundFinished(Result.Lose, player1Wins, player2Wins);
         }
         else
         {
-            await _player2.OnDrawRound(_round);
-            await _player1.OnDrawRound(_round);
+            await _player2.OnRoundFinished(Result.Draw, player2Wins, player1Wins);
+            await _player1.OnRoundFinished(Result.Draw, player1Wins, player2Wins);
         }
     }
 
@@ -78,35 +81,38 @@ public class RoomGrain : Grain, IRoomGrain
         // ReSharper disable once ConvertIfStatementToSwitchStatement
         if (player1Wins < PointsForWin && player2Wins < PointsForWin)
         {
-            await TaskStartNewRound();
+            await StartNewRound();
             return;
         }
 
         // the 1st player won
         if (player1Wins == PointsForWin)
         {
-            await _player1.OnWinGameAsync();
-            await _player2.OnLoseGameAsync();
+            await _player1.OnGameFinishedAsync(Result.Win, player1Wins, player2Wins);
+            await _player2.OnGameFinishedAsync(Result.Lose, player2Wins, player1Wins);
             return;
         }
         
         // the 2nd player won
-        await _player1.OnLoseGameAsync();
-        await _player2.OnWinGameAsync();
+        await _player1.OnGameFinishedAsync(Result.Lose, player1Wins,player2Wins);
+        await _player2.OnGameFinishedAsync(Result.Win, player2Wins, player1Wins);
     }
 
     private async Task StartGameAsync()
     {
         if (_player1 == null || _player2 == null)
             return;
+
+        var player1Name = await _player1.GetName();
+        var player2Name = await _player2.GetName();
+
+        await _player1.OnGameStarted(this.GetPrimaryKey(), player2Name);
+        await _player2.OnGameStarted(this.GetPrimaryKey(), player1Name);
         
-        await _player1.OnGameStarted(this.GetPrimaryKey());
-        await _player2.OnGameStarted(this.GetPrimaryKey());
-        
-        await TaskStartNewRound();
+        await StartNewRound();
     }
 
-    private async Task TaskStartNewRound()
+    private async Task StartNewRound()
     {
         if (_player1 == null || _player2 == null)
             return;

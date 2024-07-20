@@ -11,5 +11,6 @@
     <PackageVersion Include="Microsoft.Orleans.Runtime" Version="8.2.0" />
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="8.2.0" />
     <PackageVersion Include="Microsoft.Orleans.Server" Version="8.2.0" />
+    <PackageVersion Include="Spectre.Console" Version="0.49.1" />
   </ItemGroup>
 </Project>
