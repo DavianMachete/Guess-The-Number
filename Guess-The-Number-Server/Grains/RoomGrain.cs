@@ -41,6 +41,7 @@ public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
             if (!_didPlayer1SubmittGuess)
             {
                 _player1Number = guess;
+                _didPlayer1SubmittGuess = true;
                 var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
                 await player2.OnOpponentGuessed(guess);
             }
@@ -55,6 +56,7 @@ public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
             if (!_didPlayer2SubmittGuess)
             {
                 _player2Number = guess;
+                _didPlayer2SubmittGuess = true;
                 var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
                 await player1.OnOpponentGuessed(guess);
             }
@@ -65,7 +67,7 @@ public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
             }
         }
 
-        if (_player1Number < 0 || _player2Number < 0)
+        if (!_didPlayer1SubmittGuess || !_didPlayer2SubmittGuess)
         {
             var waitingId = playerId == _player2Id ? _player1Id : _player2Id;
             logger.LogInformation("{GrainType} {GrainKey} Waiting for player {WaitingId}.", GrainType, GrainKey,
