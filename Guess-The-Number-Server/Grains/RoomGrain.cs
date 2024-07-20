@@ -12,6 +12,8 @@ public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
     private Guid _player2Id;
     private int _player1Number;
     private int _player2Number;
+    private bool _didPlayer1SubmittGuess;
+    private bool _didPlayer2SubmittGuess;
     private int _player1Wins;
     private int _player2Wins;
 
@@ -36,15 +38,31 @@ public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
             playerId, guess);
         if (playerId != _player2Id)
         {
-            _player1Number = guess;
-            var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
-            await player2.OnOpponentGuessed(guess);
+            if (!_didPlayer1SubmittGuess)
+            {
+                _player1Number = guess;
+                var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
+                await player2.OnOpponentGuessed(guess);
+            }
+            else
+            {
+                var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
+                await player1.OnSubmitGuessFailed("Already submitted");
+            }
         }
         else
         {
-            _player2Number = guess;
-            var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
-            await player1.OnOpponentGuessed(guess)!;
+            if (!_didPlayer2SubmittGuess)
+            {
+                _player2Number = guess;
+                var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
+                await player1.OnOpponentGuessed(guess);
+            }
+            else
+            {
+                var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
+                await player2.OnSubmitGuessFailed("Already submitted");
+            }
         }
 
         if (_player1Number < 0 || _player2Number < 0)
@@ -114,8 +132,8 @@ public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
         var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
         var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
         
-        var player1Name = await player1.GetPlayerName();
-        var player2Name = await player2.GetPlayerName();
+        var player1Name = await player1.GetPlayerNameAsync();
+        var player2Name = await player2.GetPlayerNameAsync();
         
         await player1.OnGameStarted(this.GetPrimaryKey(), player2Name);
         await player2.OnGameStarted(this.GetPrimaryKey(), player1Name);
@@ -128,9 +146,9 @@ public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
         _round += 1;
 
         logger.LogInformation("{GrainType} {GrainKey} Round {Round} started.", GrainType, GrainKey, _round);
-        
-        _player1Number = -1;
-        _player2Number = -1;
+
+        _didPlayer1SubmittGuess = false;
+        _didPlayer2SubmittGuess = false;
         
         _currentTargetNumber = new Random().Next(0, 101);
         

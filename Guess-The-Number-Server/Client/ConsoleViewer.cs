@@ -34,10 +34,17 @@ public class ConsoleViewer(string userName) : IPlayerViewer
         return Task.CompletedTask;
     }
 
-    public Task NumberSubmitted(int number)
+    public Task GuessSubmitted(int number)
     {
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("You submitted [bold aqua]{0}[/] number.", number);
+        return Task.CompletedTask;
+    }
+
+    public Task OnGuessSubmitFailed(string reason)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine($"[bold yellow]Failed to submit the guess by reason:[/] {reason}");
         return Task.CompletedTask;
     }
 

@@ -31,7 +31,7 @@ public class PlayerGrain(
         logger.LogInformation("{GrainType} {GrainKey} Initialized.", GrainType, GrainKey);
     }
 
-    public async Task<string> GetPlayerName()
+    public async Task<string> GetPlayerNameAsync()
     {
         await playerModel.ReadStateAsync();
         return playerModel.State.UserName;
@@ -57,20 +57,12 @@ public class PlayerGrain(
         return Task.CompletedTask;
     }
 
-    // public async Task SubmitGuessAsync(int guess)
-    // {
-    //     logger.LogInformation("{GrainType} {GrainKey} submitting guess: {Guess}.", GrainType, GrainKey, guess);
-    //     if (_currentRoomId is null)
-    //     {
-    //         logger.LogError("{GrainType} {GrainKey} Current Room is not defined.", GrainType, GrainKey);
-    //         return;
-    //     }
-    //     
-    //     var roomGrain = GrainFactory.GetGrain<IRoomGrain>((Guid)_currentRoomId);
-    //     var playerId = this.GetPrimaryKey();
-    //     await roomGrain.SubmitGuess(playerId, guess);
-    //     _viewer?.NumberSubmitted(guess);
-    // }
+    public Task OnSubmitGuessFailed(string reason)
+    {
+        logger.LogInformation("{GrainType} {GrainKey} Failed submit the guess. Reason: {Reason}", GrainType, GrainKey, reason);
+        _viewer?.OnGuessSubmitFailed(reason);
+        return Task.CompletedTask;
+    }
 
     public Task OnOpponentGuessed(int opponentGuess)
     {
