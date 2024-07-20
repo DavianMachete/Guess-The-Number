@@ -1,130 +1,143 @@
 using GrainInterfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Grains;
 
-public class RoomGrain : Grain, IRoomGrain
+public class RoomGrain(ILogger<RoomGrain> logger) : Grain, IRoomGrain
 {
     private int _currentTargetNumber;
     private int _round;
     
-    private IPlayerGrain? _player1;
-    private IPlayerGrain? _player2;
-    private readonly Dictionary<IPlayerGrain, int> _guesses = new();
-    private readonly Dictionary<IPlayerGrain, int> _wins = new();
+    private Guid _player1Id;
+    private Guid _player2Id;
+    private int _player1Number;
+    private int _player2Number;
+    private int _player1Wins;
+    private int _player2Wins;
 
     private const int PointsForWin = 5;
-    
+
+    private static string GrainType => nameof(RoomGrain);
+    private Guid GrainKey => this.GetPrimaryKey();
+
 
     public async Task Initialize(Guid player1Id, Guid player2Id)
-    {   
-        _player1 = GrainFactory.GetGrain<IPlayerGrain>(player1Id);
-        _player2 = GrainFactory.GetGrain<IPlayerGrain>(player2Id);
-        
-        _wins[_player1] = 0;
-        _wins[_player2] = 0;
+    {
+        _player1Id = player1Id;
+        _player2Id = player2Id;
         
         await StartGameAsync();
+        logger.LogInformation("{GrainType} {GrainKey} Initialized.", GrainType, GrainKey);
     }
 
-    public async Task SubmitGuess(IPlayerGrain player, int guess)
+    public async Task SubmitGuess(Guid playerId, int guess)
     {
-        _guesses[player] = guess;
-        if (_guesses.Values.All(g => g < 0))
+        logger.LogInformation("{GrainType} {GrainKey} Player {playerId} guesses number {Guess}.", GrainType, GrainKey,
+            playerId, guess);
+        if (playerId != _player2Id)
+        {
+            _player1Number = guess;
+            var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
+            await player2.OnOpponentGuessed(guess);
+        }
+        else
+        {
+            _player2Number = guess;
+            var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
+            await player1.OnOpponentGuessed(guess)!;
+        }
+
+        if (_player1Number < 0 || _player2Number < 0)
+        {
+            var waitingId = playerId == _player2Id ? _player1Id : _player2Id;
+            logger.LogInformation("{GrainType} {GrainKey} Waiting for player {WaitingId}.", GrainType, GrainKey,
+                waitingId);
             return;
-        
+        }
+
         await DefineRoundWinnerAsync();
         await DefineGameWinnerAsync();
     }
 
     private async Task DefineRoundWinnerAsync()
     {
-        if (_player1 == null || _player2 == null)
-            return;
+        var player1Diff = Math.Abs(_currentTargetNumber - _player1Number);
+        var player2Diff = Math.Abs(_currentTargetNumber - _player2Number);
         
-        var player1Wins = _wins[_player1];
-        var player2Wins = _wins[_player2];
-        
-        var player1Guess = _guesses[_player1];
-        var player2Guess = _guesses[_player2];
-
-        var player1Diff = Math.Abs(_currentTargetNumber - player1Guess);
-        var player2Diff = Math.Abs(_currentTargetNumber - player2Guess);
-       
+        var player1Res = Result.Draw;
+        var player2Res = Result.Draw;
         if (player1Diff < player2Diff)
         {
-            _wins[_player1] += 1;
-            await _player2.OnRoundFinished(Result.Lose, player2Wins, player1Wins);
-            await _player1.OnRoundFinished(Result.Win, player1Wins, player2Wins);
+            _player1Wins += 1;
+            player1Res = Result.Win;
+            player2Res = Result.Lose;
         }
         else if (player1Diff > player2Diff)
         {
-            _wins[_player2] += 1;
-            await _player2.OnRoundFinished(Result.Win, player2Wins, player1Wins);
-            await _player1.OnRoundFinished(Result.Lose, player1Wins, player2Wins);
+            _player2Wins += 1;
+            player1Res = Result.Lose;
+            player2Res = Result.Win;
         }
-        else
-        {
-            await _player2.OnRoundFinished(Result.Draw, player2Wins, player1Wins);
-            await _player1.OnRoundFinished(Result.Draw, player1Wins, player2Wins);
-        }
-    }
 
+        var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
+        var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
+
+        await player1.OnRoundFinished(player1Res, _currentTargetNumber, _player1Wins, _player2Wins);
+        await player2.OnRoundFinished(player2Res, _currentTargetNumber, _player2Wins, _player1Wins);
+    }
+    
     private async Task DefineGameWinnerAsync()
     {
-        if (_player1 == null || _player2 == null)
-            return;
-        
-        // Check Game win
-        var player1Wins = _wins[_player1];
-        var player2Wins = _wins[_player2];
-
-        // ReSharper disable once ConvertIfStatementToSwitchStatement
-        if (player1Wins < PointsForWin && player2Wins < PointsForWin)
+        if (_player1Wins < PointsForWin && _player2Wins < PointsForWin)
         {
-            await StartNewRound();
+            await StartNextRound();
             return;
         }
 
-        // the 1st player won
-        if (player1Wins == PointsForWin)
-        {
-            await _player1.OnGameFinishedAsync(Result.Win, player1Wins, player2Wins);
-            await _player2.OnGameFinishedAsync(Result.Lose, player2Wins, player1Wins);
-            return;
-        }
+
+        var player1Res = _player1Wins == PointsForWin ? Result.Win : Result.Lose;
+        var player2Res = _player2Wins == PointsForWin ? Result.Win : Result.Lose;
         
-        // the 2nd player won
-        await _player1.OnGameFinishedAsync(Result.Lose, player1Wins,player2Wins);
-        await _player2.OnGameFinishedAsync(Result.Win, player2Wins, player1Wins);
+        var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
+        var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
+        
+        await player1.OnGameFinishedAsync(player1Res, _player1Wins,_player2Wins);
+        await player2.OnGameFinishedAsync(player2Res, _player2Wins, _player1Wins);
     }
 
     private async Task StartGameAsync()
     {
-        if (_player1 == null || _player2 == null)
-            return;
-
-        var player1Name = await _player1.GetName();
-        var player2Name = await _player2.GetName();
-
-        await _player1.OnGameStarted(this.GetPrimaryKey(), player2Name);
-        await _player2.OnGameStarted(this.GetPrimaryKey(), player1Name);
+        _round = 0;
+        _player1Wins= 0;
+        _player2Wins = 0;
         
-        await StartNewRound();
+        var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
+        var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
+        
+        var player1Name = await player1.GetPlayerName();
+        var player2Name = await player2.GetPlayerName();
+        
+        await player1.OnGameStarted(this.GetPrimaryKey(), player2Name);
+        await player2.OnGameStarted(this.GetPrimaryKey(), player1Name);
+        
+        await StartNextRound();
     }
 
-    private async Task StartNewRound()
+    private async Task StartNextRound()
     {
-        if (_player1 == null || _player2 == null)
-            return;
-        
         _round += 1;
+
+        logger.LogInformation("{GrainType} {GrainKey} Round {Round} started.", GrainType, GrainKey, _round);
         
-        _guesses[_player1] = -1;
-        _guesses[_player2] = -1;
+        _player1Number = -1;
+        _player2Number = -1;
         
         _currentTargetNumber = new Random().Next(0, 101);
+        
+        var player1 = GrainFactory.GetGrain<IPlayerGrain>(_player1Id);
+        var player2 = GrainFactory.GetGrain<IPlayerGrain>(_player2Id);
 
-        await _player1.OnGameRoundStarted(_round);
-        await _player2.OnGameRoundStarted(_round);
+        await player1.OnGameRoundStarted(_round);
+        await player2.OnGameRoundStarted(_round);
     }
 }

@@ -2,5 +2,5 @@ namespace GrainInterfaces;
 
 public interface IMatchmakingGrain : IGrainWithIntegerKey
 {
-    Task AddPlayerToQueue(Guid playerId);
+    [Alias("AddPlayerToQueue")] Task AddPlayerToQueue(Guid playerId);
 }

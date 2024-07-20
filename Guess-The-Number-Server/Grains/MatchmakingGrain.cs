@@ -8,6 +8,9 @@ public class MatchmakingGrain : Grain, IMatchmakingGrain
 
     public async Task AddPlayerToQueue(Guid playerId)
     {
+        if (_playerQueue.Contains(playerId))
+            return;
+        
         _playerQueue.Add(playerId);
 
         if (_playerQueue.Count >= 2)
@@ -21,7 +24,6 @@ public class MatchmakingGrain : Grain, IMatchmakingGrain
             var roomGrain = GrainFactory.GetGrain<IRoomGrain>(newRoomId);
 
             await roomGrain.Initialize(player1, player2);
-            
         }
     }
 }
