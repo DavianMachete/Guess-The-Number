@@ -32,7 +32,7 @@ ExportedObj/
 .consulo/
 *.csproj
 *.unityproj
-*.sln
+Guess-The-Number-Client/*.sln
 *.suo
 *.tmp
 *.user
