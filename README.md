@@ -1,10 +1,17 @@
 <h1 align="center">Guess The Number</h1>
 
+---
+---
 
 <h2 align="center">Game Description</h2>
-Welcome to an exciting multiplayer guessing game! This is a simple multiplayer game using Unity and Microsoft Orleans. 2 players in the room need to guess a number, and whoever is closer to the Croupier (server) number gets the points.
+
+---
+
+Welcome to an exciting multiplayer guessing game! This is a simple multiplayer game using Unity and Microsoft Orleans. 2 players in the room need to guess a number, and whoever is closer to the Dealer (server) number gets the points.
 
 <h2 align="center">How It Works</h2>
+
+---
 
    1. Authorization: New players must be authorized upon connecting to the server.
    2. Queueing: Players start by joining a queue.
@@ -15,14 +22,28 @@ Welcome to an exciting multiplayer guessing game! This is a simple multiplayer g
    7. Winning: The first player to reach 5 points wins the game.
 
    * Statistics: Win/loss statistics for each player are stored using the Microsoft Orleans persistence system.
+     
+---
 
+<h2 align="center">How to run game with Unity Engine?</h2>
 
 ---
-<h2 align="left">Gameplay in macOS terminal, without Unity Engine</h2>
+
+Coming soon...
+
+---
+
+
+<h2 align="center">How to run game without Unity Engine?</h2>
+
+---
+
+<h3 align="left">Gameplay in macOS terminal, without Unity Engine</h3>
 
 https://github.com/user-attachments/assets/b2c44782-7234-4a51-aaed-25f685eb908d
 
-<h2 align="left">Building and running the game without Unity Engine</h2>
+
+<h3 align="left">Building and running the game without Unity Engine</h3>
 
 To download and run the game, follow these steps:
 
